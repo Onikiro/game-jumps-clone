@@ -12,15 +12,13 @@ public class Controller : MonoBehaviour
     [SerializeField] private float _speed;
     [SerializeField] private float _force;
     [SerializeField] private float _time;
-    private List<GameObject> _path = new List<GameObject>(); 
+    private List<GameObject> _path = new List<GameObject>();
     private Rigidbody _body;
     private bool _onZPosition;
     private bool _jumpOnZ;
     private bool _inJump = true;
     private bool _sprint;
     private bool _inGame;
-    private bool _fallTime;
-    private bool _wantJump;
 
     private void Start()
     {
@@ -32,7 +30,7 @@ public class Controller : MonoBehaviour
     {
         PositionOverHandle();     
         if (!_inGame) return;
-        if(_speed < 8f) _speed += 0.1f * Time.deltaTime;
+        //if(_speed < 8f) _speed += 0.1f * Time.deltaTime;
         Move();  
         Sprint();
     }
@@ -95,7 +93,6 @@ public class Controller : MonoBehaviour
                     Gameover();
                 }
             }
-            _path.Clear();
             _sprint = false;
             _speed = _lastSpeed;
         }
@@ -137,36 +134,53 @@ public class Controller : MonoBehaviour
 
     private void OnCollisionEnter(Collision other)
     {
+        Platform currentPlatform = other.gameObject.GetComponent<Platform>();
+        if(!other.gameObject.CompareTag("Platform")) return;
         _inJump = false;
         _body.constraints = RigidbodyConstraints.FreezePositionY;
-        if (other.gameObject.GetComponent<Platform>() == null) return;
-        if (other.gameObject.GetComponent<Platform>().IsRotator)
+        if (currentPlatform != null && currentPlatform.IsRotatorLeft)
         {
-            _jumpOnZ = !_jumpOnZ;
+            _jumpOnZ = true;
+        }
+        else if (currentPlatform != null && currentPlatform.IsRotatorRight)
+        {
+            _jumpOnZ = false;
         }
         HandlePlatform(other.gameObject);
     }
 
-    private void OnCollisionExit()
+    private void OnCollisionExit(Collision other)
     {
-        _body.constraints = RigidbodyConstraints.None;
+        Platform currentPlatform = other.gameObject.GetComponent<Platform>();
+        if (currentPlatform != null && currentPlatform.IsLast && !_inJump)
+        {
+            print("wtf");
+            Gameover();
+            _body.velocity = Vector3.zero;
+        }
     }
 
     private void OnTriggerEnter(Collider other)
     {
+        if(!other.CompareTag("Platform")) return;
         _inJump = false;
         transform.position = 
             new Vector3(Mathf.FloorToInt(other.transform.position.x), 
                         transform.position.y, 
                         Mathf.FloorToInt(other.transform.position.z));
-        if (!_inJump)
+        if (!_inJump && other.GetComponent<Platform>() != null && other.GetComponent<Platform>().IsRotatorLeft)
         {
-            _onZPosition = !_onZPosition;
+            _onZPosition = true;
+        }
+        else if (other.GetComponent<Platform>() != null && other.GetComponent<Platform>().IsRotatorRight)
+        {
+            _onZPosition = false;
         }
     }
     
     private void OnCollisionStay(Collision other)
-    {
+    {   
+        if(!other.gameObject.CompareTag("Platform")) return;
         HandlePlatform(other.gameObject);
     }
 
