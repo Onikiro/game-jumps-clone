@@ -23,12 +23,5 @@ public class Platform : MonoBehaviour
 				break;
 			}
 		}
-//
-//		if (IsLast)
-//		{
-//			BoxCollider trigger = gameObject.AddComponent<BoxCollider>();
-//			trigger.center = new Vector3(0, 1, 0);
-//			trigger.size = new Vector3(0.75f, 0.75f, 0.75f);
-//		}
 	}
 }
