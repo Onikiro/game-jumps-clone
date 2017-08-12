@@ -14,8 +14,8 @@ public class Controller : MonoBehaviour
     [SerializeField] private float _time;
     private List<GameObject> _path = new List<GameObject>();
     private Rigidbody _body;
-    private bool _onZPosition;
-    private bool _jumpOnZ;
+    private bool _MoveonZDirection;
+    private bool _jumpOnZDirection;
     public bool InJump = true;
     private bool _sprint;
     private bool _inGame;
@@ -63,7 +63,7 @@ public class Controller : MonoBehaviour
 
     private void PositionOverHandle()
     {
-        if (transform.position.y < 0.5)
+        if (transform.position.y < 0.6)
         {
             Gameover();
         }
@@ -75,7 +75,7 @@ public class Controller : MonoBehaviour
 
     private void Move()
     {
-        if (_onZPosition)
+        if (_MoveonZDirection)
         {
             _body.velocity = new Vector3(0, _body.velocity.y, _speed);
         }
@@ -86,23 +86,23 @@ public class Controller : MonoBehaviour
     }
 
     private void Sprint()                                                                                                                                                                
-    {       
+    {
         if (_sprint)
         {
-            if(_speed < _lastSpeed + 2f) _speed += 0.025f * _speed;
+            if (_speed < _lastSpeed + 2f) _speed += 0.025f * _speed;
         }
-        if(InputController.IsTouchOnScreen(TouchPhase.Began))
+        if (InputController.IsTouchOnScreen(TouchPhase.Began))
         {
             _lastSpeed = _speed;
         }
-        
-        if (InputController.IsTouchOnScreen(TouchPhase.Stationary) || 
-            InputController.IsTouchOnScreen(TouchPhase.Moved)      || 
-            InputController.IsTouchOnScreen(TouchPhase.Began))                                                                 
+
+        if (InputController.IsTouchOnScreen(TouchPhase.Stationary) ||
+            InputController.IsTouchOnScreen(TouchPhase.Moved) ||
+            InputController.IsTouchOnScreen(TouchPhase.Began))
         {
             _sprint = true;
         }
-        if(InputController.IsTouchOnScreen(TouchPhase.Ended))
+        if (InputController.IsTouchOnScreen(TouchPhase.Ended))
         {
             if (!InJump)
             {
@@ -122,17 +122,17 @@ public class Controller : MonoBehaviour
         Vector3 jumpPosition = new Vector3(transform.position.x, transform.position.y, transform.position.z);
         if (_path.Count > 0)
         {
-            if (_jumpOnZ)
+            if (_jumpOnZDirection)
             {
-                _onZPosition = true;
+                _MoveonZDirection = true;
                 float posZ = _path[_path.Count - 1].transform.position.z + _path.Count + 1;
-                jumpPosition = new Vector3(transform.position.x, transform.position.y, posZ);
+                jumpPosition = new Vector3(_path[_path.Count - 1].transform.position.x, transform.position.y, posZ);
             }
             else
             {
-                _onZPosition = false;
+                _MoveonZDirection = false;
                 float posX = _path[_path.Count - 1].transform.position.x + _path.Count + 1;
-                jumpPosition = new Vector3(posX, transform.position.y, transform.position.z);
+                jumpPosition = new Vector3(posX, transform.position.y, _path[_path.Count - 1].transform.position.z);
             }
         }
         float newTime = _time;
@@ -152,8 +152,8 @@ public class Controller : MonoBehaviour
 
     private void OnCollisionEnter(Collision other)
     {
+        if (!other.gameObject.CompareTag("Platform") || !_inGame) return;
         Platform currentPlatform = other.gameObject.GetComponent<Platform>();
-        if(!other.gameObject.CompareTag("Platform") || !_inGame) return;
         InJump = false;
         SetJumpDirection(currentPlatform);
         HandlePlatform(other.gameObject);
@@ -161,39 +161,37 @@ public class Controller : MonoBehaviour
 
     void SetJumpDirection(Platform currentPlatform)
     {
-        if (currentPlatform != null && currentPlatform.IsRotatorLeft)
+        if (currentPlatform == null) return;
+        if (currentPlatform.IsRotatorLeft)
         {
-            _jumpOnZ = true;
+            _jumpOnZDirection = true;
         }
-        else if (currentPlatform != null && currentPlatform.IsRotatorRight)
+        else if (currentPlatform.IsRotatorRight)
         {
-            _jumpOnZ = false;
+            _jumpOnZDirection = false;
         }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if(!other.CompareTag("Platform") || !_inGame) return;
+        if(!other.CompareTag("Platform") || !_inGame || other.GetComponent<Platform>() == null) return;
         
-        if (!InJump && other.GetComponent<Platform>() != null && other.GetComponent<Platform>().IsRotatorLeft)
+        if (other.GetComponent<Platform>().IsRotatorLeft)
         {
             CorrectPosition(other.gameObject);
-            _onZPosition = true;
+            _MoveonZDirection = true;
         }
-        else if (other.GetComponent<Platform>() != null && other.GetComponent<Platform>().IsRotatorRight)
+        else if (other.GetComponent<Platform>().IsRotatorRight)
         {
             CorrectPosition(other.gameObject);
-            _onZPosition = false;
+            _MoveonZDirection = false;
         }
     }
 
     private void CorrectPosition(GameObject go)
     {
-        //if(!go.GetComponent<Platform>().IsLast) WAT?
         transform.position = 
-            new Vector3(Mathf.Floor(go.transform.position.x), 
-                        transform.position.y, 
-                        Mathf.Floor(go.transform.position.z));
+            new Vector3(Mathf.Floor(go.transform.position.x), transform.position.y, Mathf.Floor(go.transform.position.z));
     }
         
     private void OnCollisionStay(Collision other)
@@ -202,9 +200,24 @@ public class Controller : MonoBehaviour
         HandlePlatform(other.gameObject);
     }
 
+    float GetValueAfterDot(float pos)
+    {
+        return pos - Mathf.Floor(pos);
+    }
+
     private void HandlePlatform(GameObject go)
     {
-        if (_sprint && !_path.Contains(go) && _inGame)
+        Vector3 currentPos = transform.position;
+
+        if (GetValueAfterDot(currentPos.x) > 0.3f  &&
+           GetValueAfterDot(currentPos.x) < 0.7f ||
+           GetValueAfterDot(currentPos.z) > 0.3f  &&
+           GetValueAfterDot(currentPos.z) < 0.7f)
+        {
+            return;
+        }
+
+        if (_sprint && !_path.Contains(go))
         {
             _path.Add(go);
             if(go.GetComponentInChildren<Renderer>() != null)
