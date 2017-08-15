@@ -30,9 +30,8 @@ public class Controller : MonoBehaviour
     {
         PositionOverHandle();
         if (!_inGame) return;
-        if(_speed < 8f) _speed += 0.1f * Time.deltaTime;
-        SetConstraints();
-        Move();  
+        Move();
+        // SetConstraints();
         Sprint();
     }
 
@@ -63,7 +62,7 @@ public class Controller : MonoBehaviour
 
     private void PositionOverHandle()
     {
-        if (transform.position.y < 0.6)
+        if (transform.position.y < 0)
         {
             Gameover();
         }
@@ -83,13 +82,14 @@ public class Controller : MonoBehaviour
         {
             _body.velocity = new Vector3(_speed, _body.velocity.y, 0);
         }
+        //if(_speed < 8f) _speed += 0.1f * Time.deltaTime;
     }
 
     private void Sprint()                                                                                                                                                                
     {
         if (_sprint)
         {
-            if (_speed < _lastSpeed + 2f) _speed += 0.025f * _speed;
+            //if (_speed < _lastSpeed + 2f) _speed += 0.025f * _speed;
         }
         if (InputController.IsTouchOnScreen(TouchPhase.Began))
         {
@@ -107,10 +107,10 @@ public class Controller : MonoBehaviour
             if (!InJump)
             {
                 Jump();
-                if (InJump)
-                {
-                    Gameover();
-                }
+                // if (InJump)
+                // {
+                //     Gameover();
+                // }
             }
             _sprint = false;
             _speed = _lastSpeed;
@@ -119,21 +119,19 @@ public class Controller : MonoBehaviour
     
     private void Jump()
     {
+        if (_path.Count <= 0) return;
         Vector3 jumpPosition = new Vector3(transform.position.x, transform.position.y, transform.position.z);
-        if (_path.Count > 0)
+        if (_jumpOnZDirection)
         {
-            if (_jumpOnZDirection)
-            {
-                _MoveonZDirection = true;
-                float posZ = _path[_path.Count - 1].transform.position.z + _path.Count + 1;
-                jumpPosition = new Vector3(_path[_path.Count - 1].transform.position.x, transform.position.y, posZ);
-            }
-            else
-            {
-                _MoveonZDirection = false;
-                float posX = _path[_path.Count - 1].transform.position.x + _path.Count + 1;
-                jumpPosition = new Vector3(posX, transform.position.y, _path[_path.Count - 1].transform.position.z);
-            }
+            _MoveonZDirection = true;
+            float posZ = _path[_path.Count - 1].transform.position.z + _path.Count + 1;
+            jumpPosition = new Vector3(_path[_path.Count - 1].transform.position.x, jumpPosition.y, posZ);
+        }
+        else
+        {
+            _MoveonZDirection = false;
+            float posX = _path[_path.Count - 1].transform.position.x + _path.Count + 1;
+            jumpPosition = new Vector3(posX, jumpPosition.y, _path[_path.Count - 1].transform.position.z);
         }
         float newTime = _time;
         if (_path.Count < 2)
@@ -147,6 +145,10 @@ public class Controller : MonoBehaviour
             {
                 _path.Clear();
                 InJump = true;
+            })
+            .OnComplete(() =>
+            {
+                _body.velocity = new Vector3(_body.velocity.x + _force  * 3f, _body.velocity.y - _force * 3f, _body.velocity.z);
             });
     }
 
@@ -161,7 +163,7 @@ public class Controller : MonoBehaviour
 
     void SetJumpDirection(Platform currentPlatform)
     {
-        if (currentPlatform == null) return;
+        if (currentPlatform == null || InJump) return;
         if (currentPlatform.IsRotatorLeft)
         {
             _jumpOnZDirection = true;
@@ -190,16 +192,20 @@ public class Controller : MonoBehaviour
 
     private void CorrectPosition(GameObject go)
     {
-        transform.position = 
-            new Vector3(Mathf.Floor(go.transform.position.x), transform.position.y, Mathf.Floor(go.transform.position.z));
+        transform.position = new Vector3(Mathf.Floor(go.transform.position.x), transform.position.y, Mathf.Floor(go.transform.position.z));
     }
-        
+
     private void OnCollisionStay(Collision other)
     {   
         if(!other.gameObject.CompareTag("Platform") || !_inGame) return;
         HandlePlatform(other.gameObject);
     }
 
+/// <summary>
+/// Полуает значение после запятой
+/// </summary>
+/// <param name="pos">Значение числа типа float</param>
+/// <returns>Возвращает значение типа float < 0</returns>
     float GetValueAfterDot(float pos)
     {
         return pos - Mathf.Floor(pos);
@@ -207,18 +213,11 @@ public class Controller : MonoBehaviour
 
     private void HandlePlatform(GameObject go)
     {
-        Vector3 currentPos = transform.position;
-
-        if (GetValueAfterDot(currentPos.x) > 0.3f  &&
-           GetValueAfterDot(currentPos.x) < 0.7f ||
-           GetValueAfterDot(currentPos.z) > 0.3f  &&
-           GetValueAfterDot(currentPos.z) < 0.7f)
-        {
-            return;
-        }
-
         if (_sprint && !_path.Contains(go))
         {
+            if(transform.position.x - go.transform.position.x > 0.25) return;
+            if(transform.position.z - go.transform.position.z > 0.25) return;
+
             _path.Add(go);
             if(go.GetComponentInChildren<Renderer>() != null)
                 go.GetComponentInChildren<Renderer>().material.color = Color.green;

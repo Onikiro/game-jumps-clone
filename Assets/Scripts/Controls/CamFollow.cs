@@ -21,6 +21,6 @@ public class CamFollow : MonoBehaviour
 	private void LateUpdate()
 	{
 		if(_inGame)
-		transform.position = new Vector3(_player.position.x - 3, transform.position.y, _player.position.z - 3);
+		transform.position = new Vector3(_player.position.x - 4, 10, _player.position.z - 5);
 	}
 }

@@ -16,7 +16,7 @@ namespace Generates
 			if (IsFirst) return;
 			
 			float posX = transform.position.x, posZ = transform.position.z;
-			if(PreviousPart!= null)
+			if(PreviousPart != null)
 			{			
 				posX = transform.position.x + (PreviousPart.EndPositionPlatform.position.x - StartPositionPlatform.position.x + 1);
 				posZ = transform.position.z + (PreviousPart.EndPositionPlatform.position.z - StartPositionPlatform.position.z);
